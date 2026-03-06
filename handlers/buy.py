@@ -47,6 +47,14 @@ async def _delete(msg):
 async def buy_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
+    user = update.effective_user
+    await Database.get_or_create_user(
+        user.id,
+        user.username or "",
+        user.full_name or "",
+    )
+
     await _delete(query.message)
 
     buy_photo = await Database.get_setting("buy_photo", "")

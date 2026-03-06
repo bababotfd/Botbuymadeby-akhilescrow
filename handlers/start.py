@@ -52,6 +52,11 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, del
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        if update.message:
+            await update.message.delete()
+    except Exception:
+        pass
     await send_main_menu(update, context, delete_prev=False)
 
 

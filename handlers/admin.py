@@ -53,6 +53,12 @@ async def admin_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⛔ You are not authorised to use this command.")
         return ConversationHandler.END
 
+    await Database.get_or_create_user(
+        user.id,
+        user.username or "",
+        user.full_name or "",
+    )
+
     text = (
         "⚙️ *Admin Panel*\n\n"
         "Select an option to manage the bot:"

@@ -18,6 +18,13 @@ async def stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    user = update.effective_user
+    await Database.get_or_create_user(
+        user.id,
+        user.username or "",
+        user.full_name or "",
+    )
+
     stats = await Database.get_stats()
 
     total_users  = stats.get("total_users",  0)

@@ -20,16 +20,11 @@ async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     user = update.effective_user
-    data = await Database.get_user(user.id)
-
-    if not data:
-        await query.message.delete()
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text="❌ Profile not found. Please /start the bot first.",
-            reply_markup=back_to_main(),
-        )
-        return
+    data = await Database.get_or_create_user(
+        user.id,
+        user.username or "",
+        user.full_name or "",
+    )
 
     # Format join date
     joined_raw = data.get("joined_at", "")
