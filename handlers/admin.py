@@ -30,7 +30,8 @@ logger = logging.getLogger(__name__)
     ADMIN_AWAIT_RATES,
     ADMIN_VIEW_ORDERS,
     ADMIN_AWAIT_CHANNEL,
-) = range(17)
+    ADMIN_AWAIT_STATS_USER_ID,
+) = range(18)
 
 
 # ── Guard ──────────────────────────────────────────────────────────────────────
@@ -603,6 +604,83 @@ async def receive_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ADMIN_HOME
 
 
+# ── User Stats ─────────────────────────────────────────────────────────────
+async def prompt_user_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await _delete(query.message)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="📊 *Enter the User ID to view stats:*\n\n_(e.g. `123456789`)_",
+        parse_mode="Markdown",
+        reply_markup=admin_cancel_keyboard(),
+    )
+    return ADMIN_AWAIT_STATS_USER_ID
+
+
+async def receive_user_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id_str = update.message.text.strip()
+    await _delete(update.message)
+
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="❌ Invalid User ID. Please enter a valid number.",
+            reply_markup=admin_home_keyboard(),
+        )
+        return ADMIN_HOME
+
+    user = await Database.get_user(user_id)
+    if not user:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"❌ User `{user_id}` not found in the database.",
+            parse_mode="Markdown",
+            reply_markup=admin_home_keyboard(),
+        )
+        return ADMIN_HOME
+
+    orders = await Database.get_user_orders(user_id)
+
+    username_str = f"@{user['username']}" if user.get("username") else "—"
+    text = (
+        f"📊 *User Statistics*\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🆔 User ID: `{user['user_id']}`\n"
+        f"👤 Username: {username_str}\n"
+        f"📛 Name: {user.get('full_name') or '—'}\n"
+        f"💰 Total Bought: *${float(user.get('total_buys') or 0):,.2f}*\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📦 *Transaction History:*\n\n"
+    )
+
+    if not orders:
+        text += "_No transactions found._"
+    else:
+        for o in orders:
+            status_emoji = {"approved": "✅", "pending": "⏳", "rejected": "❌", "awaiting_payment": "🔘"}.get(o["status"], "❓")
+            created = o.get("created_at", "—")
+            if created != "—":
+                created = created.split("T")[0]
+                
+            text += (
+                f"{status_emoji} `{o['order_id']}` ({created})\n"
+                f"   💰 ${float(o['amount_usd']):,.2f} | {o['network']} | 💳 {o.get('payment_method') or '—'}\n"
+            )
+
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("↩️ Admin Menu", callback_data="adm_back")],
+        ]),
+    )
+    return ADMIN_VIEW_ORDERS
+
+
 # ── Proof channel ──────────────────────────────────────────────────
 async def prompt_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -660,6 +738,7 @@ def get_admin_conversation() -> ConversationHandler:
                 CallbackQueryHandler(view_pending_orders,  pattern="^adm_pending$"),
                 CallbackQueryHandler(prompt_approve,       pattern="^adm_approve$"),
                 CallbackQueryHandler(prompt_reject,        pattern="^adm_reject$"),
+                CallbackQueryHandler(prompt_user_stats,    pattern="^adm_user_stats$"),
             ],
             ADMIN_AWAIT_MAIN_PHOTO:  [MessageHandler(filters.PHOTO, receive_main_photo), back_btn],
             ADMIN_AWAIT_MAIN_TEXT:   [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_main_text), back_btn],
@@ -678,6 +757,7 @@ def get_admin_conversation() -> ConversationHandler:
             ADMIN_AWAIT_PAY_INFO_TEXT:   [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_pay_info_text), back_btn],
             ADMIN_AWAIT_APPROVE:     [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_approve), back_btn],
             ADMIN_AWAIT_REJECT:      [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_reject), back_btn],
+            ADMIN_AWAIT_STATS_USER_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_user_stats), back_btn],
             ADMIN_AWAIT_RATES:       [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_rates), back_btn],
             ADMIN_AWAIT_CHANNEL:     [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_channel), back_btn],
             ADMIN_VIEW_ORDERS:       [back_btn],

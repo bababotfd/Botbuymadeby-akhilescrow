@@ -141,6 +141,19 @@ class Database:
         return await _run(_query)
 
     @staticmethod
+    async def get_user_orders(user_id: int, limit: int = 50) -> list:
+        def _query():
+            try:
+                res = _client.table("orders").select("*").eq(
+                    "user_id", user_id
+                ).order("created_at", desc=True).limit(limit).execute()
+                return res.data or []
+            except Exception as e:
+                logger.error(f"get_user_orders error: {e}")
+                return []
+        return await _run(_query)
+
+    @staticmethod
     async def get_all_orders(limit: int = 15) -> list:
         def _query():
             try:

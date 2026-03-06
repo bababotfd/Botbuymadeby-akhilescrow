@@ -23,14 +23,14 @@ def network_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("💎 𝗧𝗢𝗡",   callback_data="net_ton"),
             InlineKeyboardButton("🔴 𝗧𝗥𝗖𝟮𝟬", callback_data="net_trc20"),
         ],
-        [InlineKeyboardButton("🏠 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨", callback_data="main_menu")],
+        [InlineKeyboardButton("⬅️ 𝗕𝗔𝗖𝗞", callback_data="main_menu")],
     ])
 
 
 def amount_entry_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 𝗩𝗜𝗘𝗪 𝗘𝗫𝗖𝗛𝗔𝗡𝗚𝗘 𝗥𝗔𝗧𝗘𝗦", callback_data="view_rates")],
-        [InlineKeyboardButton("🏠 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨", callback_data="main_menu")],
+        [InlineKeyboardButton("⬅️ 𝗕𝗔𝗖𝗞", callback_data="main_menu")],
     ])
 
 
@@ -41,20 +41,20 @@ def payment_method_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("🏦 𝗜𝗠𝗣𝗦", callback_data="pay_imps"),
             InlineKeyboardButton("🏧 𝗖𝗗𝗠", callback_data="pay_cdm"),
         ],
-        [InlineKeyboardButton("🏠 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨", callback_data="main_menu")],
+        [InlineKeyboardButton("⬅️ 𝗕𝗔𝗖𝗞", callback_data="main_menu")],
     ])
 
 
 def payment_proof_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("✅ 𝗜 𝗛𝗔𝗩𝗘 𝗣𝗔𝗜𝗗", callback_data="submit_proof")],
-        [InlineKeyboardButton("🏠 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨", callback_data="main_menu")],
+        [InlineKeyboardButton("⬅️ 𝗕𝗔𝗖𝗞", callback_data="main_menu")],
     ])
 
 
 def back_to_main() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🏠 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨", callback_data="main_menu")],
+        [InlineKeyboardButton("⬅️ 𝗕𝗔𝗖𝗞", callback_data="main_menu")],
     ])
 
 
@@ -95,6 +95,8 @@ def admin_home_keyboard() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton("✅ Approve Order", callback_data="adm_approve"),
             InlineKeyboardButton("❌ Reject Order",  callback_data="adm_reject"),
+        [
+            InlineKeyboardButton("📊 User Stats",    callback_data="adm_user_stats"),
         ],
     ])
 

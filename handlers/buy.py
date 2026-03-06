@@ -60,6 +60,7 @@ async def buy_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buy_photo = await Database.get_setting("buy_photo", "")
     text = await Database.get_setting("buy_text", (
         "💰 *Buy Crypto*\n\n"
+        "ADD MIN $10\n\n"
         "Enter amount in $"
     ))
 
@@ -100,21 +101,23 @@ async def enter_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         amount_usd = float(raw)
     except ValueError:
-        await context.bot.send_message(
+        msg = await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text="❌ Invalid amount. Please enter a number (e.g. `50`).",
+            text="❌ *Invalid amount. Please enter a number (e.g. `50`).*",
             parse_mode="Markdown",
             reply_markup=amount_entry_keyboard(),
         )
+        context.user_data["last_bot_message_id"] = msg.message_id
         return ENTER_AMOUNT
 
     if amount_usd < 10:
-        await context.bot.send_message(
+        msg = await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text="❌ Minimum amount is *$10*. Please try again.",
+            text="❌ *Minimum amount is $10. Please try again.*",
             parse_mode="Markdown",
             reply_markup=amount_entry_keyboard(),
         )
+        context.user_data["last_bot_message_id"] = msg.message_id
         return ENTER_AMOUNT
 
     rate       = await get_rate_for_amount(amount_usd)
@@ -124,18 +127,28 @@ async def enter_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["amount_inr"] = amount_inr
     context.user_data["rate_used"]  = rate
 
+    # Clean up the previous bot prompt (the photo/text asking for amount)
+    last_bot_msg_id = context.user_data.get("last_bot_message_id")
+    if last_bot_msg_id:
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=last_bot_msg_id)
+        except Exception:
+            pass
+        context.user_data.pop("last_bot_message_id", None)
+
     # Now ask for network
-    await context.bot.send_message(
+    msg = await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=(
             f"🔗 *Choose Blockchain Network*\n\n"
-            f"💰 Buying: *${amount_usd:,.2f}*\n"
-            f"🇮🇳 You Pay: *₹{amount_inr:,.0f}* (@ ₹{rate})\n\n"
-            f"Select the network you want to receive crypto on:"
+            f"💰 *Buying*: *${amount_usd:,.2f}*\n"
+            f"🇮🇳 *You Pay*: *₹{amount_inr:,.0f}* (@ ₹{rate})\n\n"
+            f"*Select the network you want to receive crypto on:*"
         ),
         parse_mode="Markdown",
         reply_markup=network_keyboard(),
     )
+    context.user_data["last_bot_message_id"] = msg.message_id
     return CHOOSE_NETWORK
 
 
@@ -201,16 +214,26 @@ async def enter_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["current_order_id"] = order_id
 
+    # Clean up the previous bot prompt
+    last_bot_msg_id = context.user_data.get("last_bot_message_id")
+    if last_bot_msg_id:
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=last_bot_msg_id)
+        except Exception:
+            pass
+        context.user_data.pop("last_bot_message_id", None)
+
     # Ask for Payment Method instead of directly showing receipt
-    await context.bot.send_message(
+    msg = await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=(
             f"🏦 *Choose Payment Method*\n\n"
-            f"Please select how you'd like to pay ₹{amount_inr:,.0f}:"
+            f"*Please select how you'd like to pay* ₹{amount_inr:,.0f}:"
         ),
         parse_mode="Markdown",
         reply_markup=payment_method_keyboard(),
     )
+    context.user_data["last_bot_message_id"] = msg.message_id
     return CHOOSE_PAYMENT_METHOD
 
 
@@ -239,6 +262,15 @@ async def choose_payment_method(update: Update, context: ContextTypes.DEFAULT_TY
     pay_photo = await Database.get_setting(f"{method}_photo", "")
     pay_text  = await Database.get_setting(f"{method}_text", "Payment Details")
 
+    # Clean up the previous bot prompt
+    last_bot_msg_id = context.user_data.get("last_bot_message_id")
+    if last_bot_msg_id:
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=last_bot_msg_id)
+        except Exception:
+            pass
+        context.user_data.pop("last_bot_message_id", None)
+
     receipt = (
         f"{pay_text}\n\n"
         f"📋 *Order Details*\n"
@@ -252,7 +284,7 @@ async def choose_payment_method(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
     if pay_photo:
-        await context.bot.send_photo(
+        msg = await context.bot.send_photo(
             chat_id=update.effective_chat.id,
             photo=pay_photo,
             caption=receipt,
@@ -260,12 +292,13 @@ async def choose_payment_method(update: Update, context: ContextTypes.DEFAULT_TY
             reply_markup=payment_proof_keyboard(),
         )
     else:
-        await context.bot.send_message(
+        msg = await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=receipt,
             parse_mode="Markdown",
             reply_markup=payment_proof_keyboard(),
         )
+    context.user_data["last_bot_message_id"] = msg.message_id
     return AWAIT_PAYMENT_PROOF
 
 
@@ -277,8 +310,17 @@ async def prompt_payment_proof(update: Update, context: ContextTypes.DEFAULT_TYP
 
     order_id = context.user_data.get("current_order_id", "N/A")
     context.user_data["awaiting_screenshot"] = True
+    
+    # Clean up the previous bot prompt
+    last_bot_msg_id = context.user_data.get("last_bot_message_id")
+    if last_bot_msg_id:
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=last_bot_msg_id)
+        except Exception:
+            pass
+        context.user_data.pop("last_bot_message_id", None)
 
-    await context.bot.send_message(
+    msg = await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=(
             f"🖼 *Send Payment Screenshot*\n\n"
@@ -288,17 +330,19 @@ async def prompt_payment_proof(update: Update, context: ContextTypes.DEFAULT_TYP
         parse_mode="Markdown",
         reply_markup=back_to_main(),
     )
+    context.user_data["last_bot_message_id"] = msg.message_id
     return AWAIT_SCREENSHOT
 
 
 # ── Step 6: Screenshot photo received ────────────────────────────────────────────
 async def save_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get("awaiting_screenshot"):
-        await update.message.reply_text(
+        msg = await update.message.reply_text(
             "Please tap ✅ *I HAVE PAID* button first.",
             parse_mode="Markdown",
             reply_markup=payment_proof_keyboard(),
         )
+        context.user_data["last_bot_message_id"] = msg.message_id
         return AWAIT_PAYMENT_PROOF
 
     file_id  = update.message.photo[-1].file_id
@@ -314,6 +358,16 @@ async def save_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     await _delete(update.message)
+    
+    # Clean up the previous bot prompt
+    last_bot_msg_id = context.user_data.get("last_bot_message_id")
+    if last_bot_msg_id:
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=last_bot_msg_id)
+        except Exception:
+            pass
+        context.user_data.pop("last_bot_message_id", None)
+        
     await Database.update_order_payment(order_id, method, file_id)
 
     amount_usd   = context.user_data.get("amount_usd", 0)
