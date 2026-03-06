@@ -38,7 +38,7 @@ async def stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⏳ Pending Payments:     *{pending:,}*\n"
         f"❌ Rejected Payments:    *{rejected:,}*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"💎 Powered by *Crypto Sell Bot*"
+        f"💎 Powered by *Crypto Buy Bot*"
     )
 
     try:

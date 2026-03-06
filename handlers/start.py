@@ -19,8 +19,8 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, del
 
     photo = await Database.get_setting("main_menu_photo", "")
     caption = (
-        "🏠 *Welcome to Crypto Sell Bot*\n\n"
-        "💎 Sell crypto instantly and get INR\n"
+        "🏠 *Welcome to Crypto Buy Bot*\n\n"
+        "💎 Buy crypto instantly with INR\n"
         "🔒 Secure & Fast transactions\n\n"
         "Choose an option below 👇"
     )

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     username    TEXT DEFAULT '',
     full_name   TEXT DEFAULT '',
     joined_at   TIMESTAMPTZ DEFAULT NOW(),
-    total_sold  NUMERIC DEFAULT 0,
+    total_buys  NUMERIC DEFAULT 0,
     successful_payments INTEGER DEFAULT 0,
     rejected_payments   INTEGER DEFAULT 0,
     total_orders        INTEGER DEFAULT 0
@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS orders (
     amount_usd      NUMERIC NOT NULL,
     amount_inr      NUMERIC NOT NULL,
     rate_used       NUMERIC NOT NULL,
-    tx_hash         TEXT DEFAULT '',
-    status          TEXT DEFAULT 'awaiting_hash',
+    utr             TEXT DEFAULT '',
+    status          TEXT DEFAULT 'awaiting_utr',
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS bot_settings (
 -- Default settings
 INSERT INTO bot_settings (key, value) VALUES
     ('main_menu_photo',       ''),
-    ('sell_photo',            ''),
+    ('buy_photo',             ''),
     ('stats_photo',           ''),
     ('profile_photo',         ''),
     ('support_username',      '@support'),

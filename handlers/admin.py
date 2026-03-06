@@ -102,7 +102,7 @@ async def prompt_pay_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _delete(query.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="💳 *Send the new Sell Amount photo:*",
+        text="💳 *Send the new Buy Amount photo:*",
         parse_mode="Markdown",
         reply_markup=admin_cancel_keyboard(),
     )
@@ -111,11 +111,11 @@ async def prompt_pay_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def receive_pay_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file_id = update.message.photo[-1].file_id
-    await Database.set_setting("sell_photo", file_id)
+    await Database.set_setting("buy_photo", file_id)
     await _delete(update.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="✅ Sell photo updated!",
+        text="✅ Buy photo updated!",
         reply_markup=admin_home_keyboard(),
     )
     return ADMIN_HOME
@@ -417,11 +417,11 @@ def _format_orders(orders: list, title: str) -> str:
         return f"{title}\n\n_No orders found._"
     lines = [title, ""]
     for o in orders:
-        status_emoji = {"approved": "✅", "pending": "⏳", "rejected": "❌", "awaiting_hash": "🔘"}.get(o["status"], "❓")
+        status_emoji = {"approved": "✅", "pending": "⏳", "rejected": "❌", "awaiting_utr": "🔘"}.get(o["status"], "❓")
         lines.append(
             f"{status_emoji} `{o['order_id']}`\n"
             f"   💰 ${float(o['amount_usd']):,.2f}  |  {o['network']}\n"
-            f"   🔢 TxHash: `{o.get('tx_hash') or '—'}`\n"
+            f"   🔢 UTR: `{o.get('utr') or '—'}`\n"
         )
     return "\n".join(lines)
 

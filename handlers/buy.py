@@ -35,24 +35,22 @@ async def _delete(msg):
         pass
 
 
-# ── Entry: user taps "Sell Crypto" ─────────────────────────────────────────────
-async def sell_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ── Entry: user taps "Buy Crypto" ─────────────────────────────────────────────
+async def buy_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     await _delete(query.message)
 
-    sell_photo = await Database.get_setting("sell_photo", "")
+    buy_photo = await Database.get_setting("buy_photo", "")
     text = (
-        "💰 *Sell Your Crypto*\n\n"
-        "💵 *Enter the amount in USD ($)*\n"
-        "_Minimum: $10_\n\n"
-        "Type your amount below 👇  (e.g. `50`)"
+        "💰 *Buy Crypto*\n\n"
+        "Enter amount in $"
     )
 
-    if sell_photo:
+    if buy_photo:
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
-            photo=sell_photo,
+            photo=buy_photo,
             caption=text,
             parse_mode="Markdown",
             reply_markup=amount_entry_keyboard(),
@@ -115,9 +113,9 @@ async def enter_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id=update.effective_chat.id,
         text=(
             f"🔗 *Choose Blockchain Network*\n\n"
-            f"💰 Selling: *${amount_usd:,.2f}*\n"
-            f"🇮🇳 Expected: *₹{amount_inr:,.0f}* (@ ₹{rate})\n\n"
-            f"Select the network you want to send crypto on:"
+            f"💰 Buying: *${amount_usd:,.2f}*\n"
+            f"🇮🇳 You Pay: *₹{amount_inr:,.0f}* (@ ₹{rate})\n\n"
+            f"Select the network you want to receive crypto on:"
         ),
         parse_mode="Markdown",
         reply_markup=network_keyboard(),
@@ -142,7 +140,7 @@ async def choose_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text=(
             f"🏦 *Enter Receiving Details*\n\n"
             f"You selected: *{net_label}*\n\n"
-            f"Please enter your *UPI ID* or *Bank Details* where you want to receive INR:"
+            f"Please enter your *Crypto Wallet Address* where you want to receive the crypto:"
         ),
         parse_mode="Markdown",
         reply_markup=back_to_main(),
@@ -195,8 +193,8 @@ async def enter_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📋 *Order Details*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🆔 Order ID:  `{order_id}`\n"
-        f"💰 Send:      *${amount_usd:,.2f}* ({net_label})\n"
-        f"🇮🇳 Receive:   *₹{amount_inr:,.0f}*  (@ ₹{rate}/$)\n"
+        f"💰 Receive:   *${amount_usd:,.2f}* ({net_label})\n"
+        f"🇮🇳 Pay:       *₹{amount_inr:,.0f}*  (@ ₹{rate}/$)\n"
         f"🏦 To:        `{user_address}`\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"⚡ Tap *Submit UTR* after making the payment."
@@ -264,7 +262,7 @@ async def save_tx_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     await _delete(update.message)
-    await Database.update_order_txhash(order_id, tx_hash)
+    await Database.update_order_utr(order_id, tx_hash)
 
     amount_usd   = context.user_data.get("amount_usd", 0)
     amount_inr   = context.user_data.get("amount_inr", 0)
@@ -274,14 +272,14 @@ async def save_tx_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username_str = f"@{user.username}" if user.username else f"{user.full_name}"
 
     proof_text = (
-        f"🔔 *New Sell Order Proof*\n"
+        f"🔔 *New Buy Order Proof*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🆔 Order ID:   `{order_id}`\n"
         f"🔗 Network:    *{network}*\n"
-        f"💰 User Sent:  *${amount_usd:,.2f}*\n"
+        f"💰 User Recv:  *${amount_usd:,.2f}*\n"
         f"🏦 User Addr:  `{user_address}`\n"
-        f"🇮🇳 Pay User:   *₹{amount_inr:,.0f}*\n"
-        f"🔢 Tx Hash:    `{tx_hash}`\n"
+        f"🇮🇳 User Paid:  *₹{amount_inr:,.0f}*\n"
+        f"🔢 UTR:        `{tx_hash}`\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"👤 User:       {username_str}\n"
         f"🪪 User ID:    `{user.id}`\n"
@@ -319,8 +317,8 @@ async def save_tx_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=(
-            f"✅ *UTR successfully submitted*\n\n"
-            f"Wait 15-20 minutes the payment will be checked and done."
+            f"**Utr successfully submitted**\n"
+            f"**wait 15-20 minutes the payment will be checked and done**"
         ),
         parse_mode="Markdown",
         reply_markup=back_to_main(),
@@ -347,9 +345,9 @@ async def cancel_sell_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ── ConversationHandler factory ───────────────────────────────────────────────
-def get_sell_conversation() -> ConversationHandler:
+def get_buy_conversation() -> ConversationHandler:
     return ConversationHandler(
-        entry_points=[CallbackQueryHandler(sell_start, pattern="^buy$")],  # Kept "buy" callback to avoid changing start.py keyboards if unnecessary
+        entry_points=[CallbackQueryHandler(buy_start, pattern="^buy$")],  # Kept "buy" callback to avoid changing start.py keyboards if unnecessary
         states={
             ENTER_AMOUNT: [
                 CallbackQueryHandler(view_rates_popup, pattern="^view_rates$"),

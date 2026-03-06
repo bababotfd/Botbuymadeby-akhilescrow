@@ -3,7 +3,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("💰 Sell Crypto", callback_data="buy")],
+        [InlineKeyboardButton("💰 Buy Crypto", callback_data="buy")],
         [
             InlineKeyboardButton("📊 Stats",   callback_data="stats"),
             InlineKeyboardButton("👤 Profile", callback_data="profile"),
@@ -52,7 +52,7 @@ def admin_home_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("🖼 Main Menu Photo",  callback_data="adm_main_photo"),
-            InlineKeyboardButton("💳 Sell Photo",       callback_data="adm_pay_photo"),
+            InlineKeyboardButton("💳 Buy Photo",        callback_data="adm_pay_photo"),
         ],
         [
             InlineKeyboardButton("📊 Stats Photo",      callback_data="adm_stats_photo"),

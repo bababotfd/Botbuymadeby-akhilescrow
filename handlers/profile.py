@@ -40,7 +40,7 @@ async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         joined = "N/A"
 
     username = f"@{data.get('username')}" if data.get("username") else "—"
-    total_sold = float(data.get("total_sold") or 0)
+    total_buys = float(data.get("total_buys") or 0)
 
     text = (
         f"👤 *Your Profile*\n"
@@ -50,7 +50,7 @@ async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📛 Name:               {data.get('full_name') or '—'}\n"
         f"📅 Member Since:    *{joined}*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"💰 Total Crypto Sold:    *${total_sold:,.2f}*\n"
+        f"💰 Total Crypto Bought:  *${total_buys:,.2f}*\n"
         f"📦 Total Orders:         *{data.get('total_orders') or 0}*\n"
         f"✅ Successful Payments:  *{data.get('successful_payments') or 0}*\n"
         f"❌ Rejected Payments:    *{data.get('rejected_payments') or 0}*\n"
