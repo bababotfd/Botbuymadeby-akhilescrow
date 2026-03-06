@@ -1,0 +1,40 @@
+import logging
+from telegram.ext import Application
+
+from config import BOT_TOKEN
+from handlers.start import get_handlers as start_handlers
+from handlers.buy import get_buy_conversation
+from handlers.profile import get_handlers as profile_handlers
+from handlers.stats import get_handlers as stats_handlers
+from handlers.support import get_handlers as support_handlers
+from handlers.admin import get_admin_conversation
+
+logging.basicConfig(
+    format="%(asctime)s | %(levelname)-8s | %(name)s — %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
+
+
+def build_app() -> Application:
+    app = Application.builder().token(BOT_TOKEN).build()
+
+    # Admin conversation MUST be registered first so its /admin command
+    # is caught before the generic message handler.
+    app.add_handler(get_admin_conversation())
+
+    # Buy conversation
+    app.add_handler(get_buy_conversation())
+
+    # Simple callback handlers
+    for handler in start_handlers():
+        app.add_handler(handler)
+    for handler in profile_handlers():
+        app.add_handler(handler)
+    for handler in stats_handlers():
+        app.add_handler(handler)
+    for handler in support_handlers():
+        app.add_handler(handler)
+
+    logger.info("All handlers registered.")
+    return app

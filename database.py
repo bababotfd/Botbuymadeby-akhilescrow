@@ -1,0 +1,231 @@
+import asyncio
+import logging
+from supabase import create_client, Client
+from config import SUPABASE_URL, SUPABASE_KEY
+
+logger = logging.getLogger(__name__)
+
+_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+async def _run(fn):
+    """Run a blocking Supabase call in a thread so we don't block the event loop."""
+    return await asyncio.to_thread(fn)
+
+
+class Database:
+
+    # ── Users ──────────────────────────────────────────────────────────────
+
+    @staticmethod
+    async def get_or_create_user(user_id: int, username: str, full_name: str) -> dict:
+        def _query():
+            try:
+                res = _client.table("users").select("*").eq("user_id", user_id).maybe_single().execute()
+                if res.data:
+                    _client.table("users").update(
+                        {"username": username, "full_name": full_name}
+                    ).eq("user_id", user_id).execute()
+                    return res.data
+                else:
+                    payload = {"user_id": user_id, "username": username, "full_name": full_name}
+                    r = _client.table("users").insert(payload).execute()
+                    return r.data[0] if r.data else payload
+            except Exception as e:
+                logger.error(f"get_or_create_user error: {e}")
+                return {}
+        return await _run(_query)
+
+    @staticmethod
+    async def get_user(user_id: int) -> dict | None:
+        def _query():
+            try:
+                res = _client.table("users").select("*").eq("user_id", user_id).maybe_single().execute()
+                return res.data
+            except Exception as e:
+                logger.error(f"get_user error: {e}")
+                return None
+        return await _run(_query)
+
+    # ── Orders ─────────────────────────────────────────────────────────────
+
+    @staticmethod
+    async def create_order(data: dict) -> dict:
+        def _query():
+            try:
+                res = _client.table("orders").insert(data).execute()
+                # Increment total_orders on user
+                _client.table("users").rpc  # placeholder
+                u = _client.table("users").select("total_orders").eq("user_id", data["user_id"]).maybe_single().execute()
+                if u.data is not None:
+                    _client.table("users").update(
+                        {"total_orders": (u.data.get("total_orders") or 0) + 1}
+                    ).eq("user_id", data["user_id"]).execute()
+                return res.data[0] if res.data else {}
+            except Exception as e:
+                logger.error(f"create_order error: {e}")
+                return {}
+        return await _run(_query)
+
+    @staticmethod
+    async def update_order_utr(order_id: str, utr: str) -> bool:
+        def _query():
+            try:
+                _client.table("orders").update(
+                    {"utr": utr, "status": "pending"}
+                ).eq("order_id", order_id).execute()
+                return True
+            except Exception as e:
+                logger.error(f"update_order_utr error: {e}")
+                return False
+        return await _run(_query)
+
+    @staticmethod
+    async def approve_order(order_id: str) -> dict | None:
+        def _query():
+            try:
+                res = _client.table("orders").update(
+                    {"status": "approved"}
+                ).eq("order_id", order_id).select("*").execute()
+                if not res.data:
+                    return None
+                order = res.data[0]
+                u = _client.table("users").select(
+                    "successful_payments,total_buys"
+                ).eq("user_id", order["user_id"]).maybe_single().execute()
+                if u.data:
+                    _client.table("users").update({
+                        "successful_payments": (u.data.get("successful_payments") or 0) + 1,
+                        "total_buys": float(u.data.get("total_buys") or 0) + float(order["amount_usd"]),
+                    }).eq("user_id", order["user_id"]).execute()
+                return order
+            except Exception as e:
+                logger.error(f"approve_order error: {e}")
+                return None
+        return await _run(_query)
+
+    @staticmethod
+    async def reject_order(order_id: str) -> dict | None:
+        def _query():
+            try:
+                res = _client.table("orders").update(
+                    {"status": "rejected"}
+                ).eq("order_id", order_id).select("*").execute()
+                if not res.data:
+                    return None
+                order = res.data[0]
+                u = _client.table("users").select(
+                    "rejected_payments"
+                ).eq("user_id", order["user_id"]).maybe_single().execute()
+                if u.data:
+                    _client.table("users").update({
+                        "rejected_payments": (u.data.get("rejected_payments") or 0) + 1,
+                    }).eq("user_id", order["user_id"]).execute()
+                return order
+            except Exception as e:
+                logger.error(f"reject_order error: {e}")
+                return None
+        return await _run(_query)
+
+    @staticmethod
+    async def get_pending_orders(limit: int = 15) -> list:
+        def _query():
+            try:
+                res = _client.table("orders").select("*").eq(
+                    "status", "pending"
+                ).order("created_at", desc=True).limit(limit).execute()
+                return res.data or []
+            except Exception as e:
+                logger.error(f"get_pending_orders error: {e}")
+                return []
+        return await _run(_query)
+
+    @staticmethod
+    async def get_all_orders(limit: int = 15) -> list:
+        def _query():
+            try:
+                res = _client.table("orders").select("*").order(
+                    "created_at", desc=True
+                ).limit(limit).execute()
+                return res.data or []
+            except Exception as e:
+                logger.error(f"get_all_orders error: {e}")
+                return []
+        return await _run(_query)
+
+    @staticmethod
+    async def get_order_by_id(order_id: str) -> dict | None:
+        def _query():
+            try:
+                res = _client.table("orders").select("*").eq(
+                    "order_id", order_id
+                ).maybe_single().execute()
+                return res.data
+            except Exception as e:
+                logger.error(f"get_order_by_id error: {e}")
+                return None
+        return await _run(_query)
+
+    # ── Settings ───────────────────────────────────────────────────────────
+
+    @staticmethod
+    async def get_setting(key: str, default: str = "") -> str:
+        def _query():
+            try:
+                res = _client.table("bot_settings").select("value").eq(
+                    "key", key
+                ).maybe_single().execute()
+                return res.data["value"] if res.data else default
+            except Exception as e:
+                logger.error(f"get_setting({key}) error: {e}")
+                return default
+        return await _run(_query)
+
+    @staticmethod
+    async def set_setting(key: str, value: str) -> bool:
+        def _query():
+            try:
+                _client.table("bot_settings").upsert(
+                    {"key": key, "value": value}
+                ).execute()
+                return True
+            except Exception as e:
+                logger.error(f"set_setting({key}) error: {e}")
+                return False
+        return await _run(_query)
+
+    # ── Stats ──────────────────────────────────────────────────────────────
+
+    @staticmethod
+    async def get_stats() -> dict:
+        def _query():
+            try:
+                users_res = _client.table("users").select("user_id", count="exact").execute()
+                orders_res = _client.table("orders").select(
+                    "amount_usd,status", count="exact"
+                ).execute()
+
+                total_usd = 0.0
+                successful = pending = rejected = 0
+                for o in (orders_res.data or []):
+                    total_usd += float(o.get("amount_usd") or 0)
+                    s = o.get("status", "")
+                    if s == "approved":
+                        successful += 1
+                    elif s == "pending":
+                        pending += 1
+                    elif s == "rejected":
+                        rejected += 1
+
+                return {
+                    "total_users": users_res.count or 0,
+                    "total_orders": orders_res.count or 0,
+                    "total_usd": total_usd,
+                    "successful": successful,
+                    "pending": pending,
+                    "rejected": rejected,
+                }
+            except Exception as e:
+                logger.error(f"get_stats error: {e}")
+                return {}
+        return await _run(_query)
