@@ -21,14 +21,14 @@ async def channel_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Edit channel message to show approved status
     try:
-        await query.edit_message_text(
-            text=(
+        await query.edit_message_caption(
+            caption=(
                 f"✅ *APPROVED*\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"🆔 Order ID:  `{order_id}`\n"
                 f"💰 Amount:   *${float(order['amount_usd']):,.2f}*\n"
                 f"🏦 Details:  `{order.get('user_receiving_address', '—')}`\n"
-                f"🔢 UTR:   `{order.get('utr', '—')}`\n"
+                f"💳 Method:   *{order.get('payment_method', '—')}*\n"
                 f"👤 User ID:  `{order['user_id']}`\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"✅ Approved and user notified."
@@ -67,14 +67,14 @@ async def channel_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Edit channel message to show rejected status
     try:
-        await query.edit_message_text(
-            text=(
+        await query.edit_message_caption(
+            caption=(
                 f"❌ *REJECTED*\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"🆔 Order ID:  `{order_id}`\n"
                 f"💰 Amount:   *${float(order['amount_usd']):,.2f}*\n"
                 f"🏦 Details:  `{order.get('user_receiving_address', '—')}`\n"
-                f"🔢 UTR:   `{order.get('utr', '—')}`\n"
+                f"💳 Method:   *{order.get('payment_method', '—')}*\n"
                 f"👤 User ID:  `{order['user_id']}`\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"❌ Rejected and user notified."

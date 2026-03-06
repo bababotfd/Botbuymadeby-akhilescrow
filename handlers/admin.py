@@ -22,16 +22,15 @@ logger = logging.getLogger(__name__)
     ADMIN_AWAIT_PAY_TEXT,
     ADMIN_AWAIT_SUPPORT,
     ADMIN_AWAIT_CONV_MSG,
-    ADMIN_CHOOSE_QR,
-    ADMIN_AWAIT_QR_ACTION,
-    ADMIN_AWAIT_QR_PHOTO,
-    ADMIN_AWAIT_QR_CAPTION,
+    ADMIN_AWAIT_PAY_INFO_ACTION,
+    ADMIN_AWAIT_PAY_INFO_PHOTO,
+    ADMIN_AWAIT_PAY_INFO_TEXT,
     ADMIN_AWAIT_APPROVE,
     ADMIN_AWAIT_REJECT,
     ADMIN_AWAIT_RATES,
     ADMIN_VIEW_ORDERS,
     ADMIN_AWAIT_CHANNEL,
-) = range(18)
+) = range(17)
 
 
 # ── Guard ──────────────────────────────────────────────────────────────────────
@@ -282,98 +281,80 @@ async def receive_conv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Removed Wallet logic separately since selling bot gives user *their* crypto wallet within the QR logic.
 
 
-# ── QR codes ───────────────────────────────────────────────────────────────────
-async def prompt_qr_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ── Payment Methods Info ───────────────────────────────────────────────────────
+async def prompt_pay_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await _delete(query.message)
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="📷 *Select network to update QR & Caption:*",
-        parse_mode="Markdown",
-        reply_markup=network_choice_keyboard("qr"),
-    )
-    return ADMIN_CHOOSE_QR
-
-
-async def choose_qr_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    network = query.data.split("_")[1]
-    context.user_data["editing_qr_network"] = network
+    
+    # "adm_upi" or "adm_imps"
+    method = query.data.split("_")[1]
+    context.user_data["editing_pay_method"] = method
     await _delete(query.message)
     
-    markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📷 Set QR Photo", callback_data="setqr_photo")],
-        [InlineKeyboardButton("💬 Set Caption Text", callback_data="setqr_caption")],
-        [InlineKeyboardButton("↩️ Admin Menu", callback_data="adm_back")],
-    ])
+    from utils.keyboards import payment_info_action_keyboard
+    markup = payment_info_action_keyboard()
     
-    caption = await Database.get_setting(f"qr_caption_{network}", "Not set")
+    text_val = await Database.get_setting(f"{method}_text", "Not set")
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"📷 *{network.upper()} Settings*\n\nCurrent Caption:\n`{caption}`\n\nWhat would you like to update?",
+        text=f"🏦 *{method.upper()} Settings*\n\nCurrent Text:\n`{text_val}`\n\nWhat would you like to update?",
         parse_mode="Markdown",
         reply_markup=markup,
     )
-    return ADMIN_AWAIT_QR_ACTION
+    return ADMIN_AWAIT_PAY_INFO_ACTION
 
 
-async def prompt_qr_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def prompt_pay_info_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    network = context.user_data.get("editing_qr_network", "")
+    method = context.user_data.get("editing_pay_method", "")
     await _delete(query.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"📷 *Send the QR code photo for {network.upper()}:*",
+        text=f"🖼 *Send the payment photo for {method.upper()}:*",
         parse_mode="Markdown",
         reply_markup=admin_cancel_keyboard(),
     )
-    return ADMIN_AWAIT_QR_PHOTO
+    return ADMIN_AWAIT_PAY_INFO_PHOTO
 
 
-async def prompt_qr_caption(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def prompt_pay_info_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    network = context.user_data.get("editing_qr_network", "")
+    method = context.user_data.get("editing_pay_method", "")
     await _delete(query.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"💬 *Send the new text caption for {network.upper()}:*\n_(This text will appear below the QR code, usually where you type the wallet address)_",
+        text=f"📝 *Send the new payment details text for {method.upper()}:*",
         parse_mode="Markdown",
         reply_markup=admin_cancel_keyboard(),
     )
-    return ADMIN_AWAIT_QR_CAPTION
+    return ADMIN_AWAIT_PAY_INFO_TEXT
 
 
-async def receive_qr_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    network = context.user_data.pop("editing_qr_network", None)
-    if not network:
-        await update.message.reply_text("❌ Session error.", reply_markup=admin_home_keyboard())
-        return ADMIN_HOME
+async def receive_pay_info_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    method = context.user_data.get("editing_pay_method", "")
     file_id = update.message.photo[-1].file_id
-    await Database.set_setting(f"qr_{network}", file_id)
+    if method:
+        await Database.set_setting(f"{method}_photo", file_id)
     await _delete(update.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"✅ QR code photo for {network.upper()} updated!",
+        text=f"✅ {method.upper()} photo updated!",
         reply_markup=admin_home_keyboard(),
     )
     return ADMIN_HOME
 
 
-async def receive_qr_caption(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    network = context.user_data.pop("editing_qr_network", None)
-    if not network:
-        await update.message.reply_text("❌ Session error.", reply_markup=admin_home_keyboard())
-        return ADMIN_HOME
-    text = update.message.text.strip()
-    await Database.set_setting(f"qr_caption_{network}", text)
+async def receive_pay_info_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    method = context.user_data.get("editing_pay_method", "")
+    val = update.message.text
+    if method:
+        await Database.set_setting(f"{method}_text", val)
     await _delete(update.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"✅ QR caption for {network.upper()} updated!",
+        text=f"✅ {method.upper()} text updated!",
         reply_markup=admin_home_keyboard(),
     )
     return ADMIN_HOME
@@ -467,11 +448,11 @@ def _format_orders(orders: list, title: str) -> str:
         return f"{title}\n\n_No orders found._"
     lines = [title, ""]
     for o in orders:
-        status_emoji = {"approved": "✅", "pending": "⏳", "rejected": "❌", "awaiting_utr": "🔘"}.get(o["status"], "❓")
+        status_emoji = {"approved": "✅", "pending": "⏳", "rejected": "❌", "awaiting_payment": "🔘"}.get(o["status"], "❓")
         lines.append(
             f"{status_emoji} `{o['order_id']}`\n"
             f"   💰 ${float(o['amount_usd']):,.2f}  |  {o['network']}\n"
-            f"   🔢 UTR: `{o.get('utr') or '—'}`\n"
+            f"   💳 Method: `{o.get('payment_method') or '—'}`\n"
         )
     return "\n".join(lines)
 
@@ -666,7 +647,7 @@ def get_admin_conversation() -> ConversationHandler:
                 CallbackQueryHandler(prompt_profile_photo, pattern="^adm_profile_photo$"),
                 CallbackQueryHandler(prompt_support,       pattern="^adm_support$"),
                 CallbackQueryHandler(prompt_conv_msg,      pattern="^adm_conv_msg$"),
-                CallbackQueryHandler(prompt_qr_network,    pattern="^adm_qr$"),
+                CallbackQueryHandler(prompt_pay_info,      pattern="^adm_(upi|imps)$"),
                 CallbackQueryHandler(prompt_rates,         pattern="^adm_rates$"),
                 CallbackQueryHandler(prompt_channel,       pattern="^adm_channel$"),
                 CallbackQueryHandler(view_all_orders,      pattern="^adm_orders$"),
@@ -682,17 +663,13 @@ def get_admin_conversation() -> ConversationHandler:
             ADMIN_AWAIT_PROFILE_PHOTO:[MessageHandler(filters.PHOTO, receive_profile_photo),back_btn],
             ADMIN_AWAIT_SUPPORT:     [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_support), back_btn],
             ADMIN_AWAIT_CONV_MSG:    [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_conv_msg), back_btn],
-            ADMIN_CHOOSE_QR: [
-                CallbackQueryHandler(choose_qr_network, pattern="^qr_(bep20|erc20|ton|trc20)$"),
+            ADMIN_AWAIT_PAY_INFO_ACTION: [
+                CallbackQueryHandler(prompt_pay_info_photo, pattern="^setpay_photo$"),
+                CallbackQueryHandler(prompt_pay_info_text, pattern="^setpay_text$"),
                 back_btn,
             ],
-            ADMIN_AWAIT_QR_ACTION: [
-                CallbackQueryHandler(prompt_qr_photo, pattern="^setqr_photo$"),
-                CallbackQueryHandler(prompt_qr_caption, pattern="^setqr_caption$"),
-                back_btn,
-            ],
-            ADMIN_AWAIT_QR_PHOTO:    [MessageHandler(filters.PHOTO, receive_qr_photo), back_btn],
-            ADMIN_AWAIT_QR_CAPTION:  [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_qr_caption), back_btn],
+            ADMIN_AWAIT_PAY_INFO_PHOTO:  [MessageHandler(filters.PHOTO, receive_pay_info_photo), back_btn],
+            ADMIN_AWAIT_PAY_INFO_TEXT:   [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_pay_info_text), back_btn],
             ADMIN_AWAIT_APPROVE:     [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_approve), back_btn],
             ADMIN_AWAIT_REJECT:      [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_reject), back_btn],
             ADMIN_AWAIT_RATES:       [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_rates), back_btn],

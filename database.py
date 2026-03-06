@@ -68,15 +68,15 @@ class Database:
         return await _run(_query)
 
     @staticmethod
-    async def update_order_utr(order_id: str, utr: str) -> bool:
+    async def update_order_payment(order_id: str, payment_method: str, screenshot_id: str) -> bool:
         def _query():
             try:
                 _client.table("orders").update(
-                    {"utr": utr, "status": "pending"}
+                    {"payment_method": payment_method, "screenshot_id": screenshot_id, "status": "pending"}
                 ).eq("order_id", order_id).execute()
                 return True
             except Exception as e:
-                logger.error(f"update_order_utr error: {e}")
+                logger.error(f"update_order_payment error: {e}")
                 return False
         return await _run(_query)
 

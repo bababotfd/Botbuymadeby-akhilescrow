@@ -7,8 +7,9 @@ from telegram.ext import (
 
 from database import Database
 from utils.keyboards import (
-    network_keyboard, amount_entry_keyboard, receipt_keyboard, back_to_main,
-    channel_order_keyboard,
+    main_menu_keyboard, network_keyboard, amount_entry_keyboard,
+    payment_method_keyboard, payment_proof_keyboard,
+    back_to_main, channel_order_keyboard
 )
 from utils.order_id import generate_order_id
 from utils.exchange_rate import get_rate_for_amount
@@ -17,7 +18,14 @@ from config import ADMIN_IDS
 logger = logging.getLogger(__name__)
 
 # ── Conversation states ────────────────────────────────────────────────────────
-ENTER_AMOUNT, CHOOSE_NETWORK, ENTER_ADDRESS, AWAIT_TX_HASH = range(4)
+(
+    ENTER_AMOUNT,
+    CHOOSE_NETWORK,
+    ENTER_ADDRESS,
+    CHOOSE_PAYMENT_METHOD,
+    AWAIT_PAYMENT_PROOF,
+    AWAIT_SCREENSHOT,
+) = range(6)
 
 NETWORK_LABELS = {
     "bep20": "🟡 BEP20 (BSC)",
@@ -185,11 +193,46 @@ async def enter_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["current_order_id"] = order_id
 
-    qr_file_id  = await Database.get_setting(f"qr_{network}", "")
-    qr_caption  = await Database.get_setting(f"qr_caption_{network}", f"Send {net_label} to the address below:")
+    # Ask for Payment Method instead of directly showing receipt
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=(
+            f"🏦 *Choose Payment Method*\n\n"
+            f"Please select how you'd like to pay ₹{amount_inr:,.0f}:"
+        ),
+        parse_mode="Markdown",
+        reply_markup=payment_method_keyboard(),
+    )
+    return CHOOSE_PAYMENT_METHOD
+
+
+# ── Step 4: Payment Method chosen ──────────────────────────────────────────────
+async def choose_payment_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    method = query.data.split("_")[1]  # upi, imps, cdm
+    
+    if method == "cdm":
+        await query.answer("Unavailable, please choose UPI or IMPS", show_alert=True)
+        return CHOOSE_PAYMENT_METHOD
+
+    await _delete(query.message)
+    context.user_data["payment_method"] = method.upper()
+
+    order_id     = context.user_data.get("current_order_id")
+    amount_usd   = context.user_data.get("amount_usd")
+    amount_inr   = context.user_data.get("amount_inr")
+    rate         = context.user_data.get("rate_used")
+    network      = context.user_data.get("network")
+    user_address = context.user_data.get("user_address")
+    net_label    = NETWORK_LABELS.get(network, network.upper())
+
+    pay_photo = await Database.get_setting(f"{method}_photo", "")
+    pay_text  = await Database.get_setting(f"{method}_text", "Payment Details")
 
     receipt = (
-        f"{qr_caption}\n\n"
+        f"{pay_text}\n\n"
         f"📋 *Order Details*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🆔 Order ID:  `{order_id}`\n"
@@ -197,61 +240,62 @@ async def enter_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🇮🇳 Pay:       *₹{amount_inr:,.0f}*  (@ ₹{rate}/$)\n"
         f"🏦 To:        `{user_address}`\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"⚡ Tap *Submit UTR* after making the payment."
+        f"⚡ Tap *I HAVE PAID* after making the payment."
     )
 
-    if qr_file_id:
+    if pay_photo:
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
-            photo=qr_file_id,
+            photo=pay_photo,
             caption=receipt,
             parse_mode="Markdown",
-            reply_markup=receipt_keyboard(),
+            reply_markup=payment_proof_keyboard(),
         )
     else:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=receipt,
             parse_mode="Markdown",
-            reply_markup=receipt_keyboard(),
+            reply_markup=payment_proof_keyboard(),
         )
-    return AWAIT_TX_HASH
+    return AWAIT_PAYMENT_PROOF
 
 
-# ── Step 4a: "Submit UTR" button tapped ───────────────────────────────────────
-async def prompt_tx_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ── Step 5: "I HAVE PAID" button tapped ─────────────────────────────────────────
+async def prompt_payment_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     await _delete(query.message)
 
     order_id = context.user_data.get("current_order_id", "N/A")
-    context.user_data["awaiting_hash_text"] = True
+    context.user_data["awaiting_screenshot"] = True
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=(
-            f"💳 *Enter Your UTR / Transaction Hash*\n\n"
+            f"🖼 *Send Payment Screenshot*\n\n"
             f"🆔 Order: `{order_id}`\n\n"
-            f"Please type your UTR, TxHash, or transaction reference number:"
+            f"Please send the screenshot of your payment now:"
         ),
         parse_mode="Markdown",
         reply_markup=back_to_main(),
     )
-    return AWAIT_TX_HASH
+    return AWAIT_SCREENSHOT
 
 
-# ── Step 4b: TX Hash text received ────────────────────────────────────────────
-async def save_tx_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.user_data.get("awaiting_hash_text"):
+# ── Step 6: Screenshot photo received ────────────────────────────────────────────
+async def save_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.user_data.get("awaiting_screenshot"):
         await update.message.reply_text(
-            "Please tap ✅ *Submit UTR* button first.",
+            "Please tap ✅ *I HAVE PAID* button first.",
             parse_mode="Markdown",
-            reply_markup=receipt_keyboard(),
+            reply_markup=payment_proof_keyboard(),
         )
-        return AWAIT_TX_HASH
+        return AWAIT_PAYMENT_PROOF
 
-    tx_hash  = update.message.text.strip()
+    file_id  = update.message.photo[-1].file_id
     order_id = context.user_data.get("current_order_id")
+    method   = context.user_data.get("payment_method", "UNKNOWN")
 
     if not order_id:
         await update.message.reply_text(
@@ -262,7 +306,7 @@ async def save_tx_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     await _delete(update.message)
-    await Database.update_order_utr(order_id, tx_hash)
+    await Database.update_order_payment(order_id, method, file_id)
 
     amount_usd   = context.user_data.get("amount_usd", 0)
     amount_inr   = context.user_data.get("amount_inr", 0)
@@ -279,7 +323,7 @@ async def save_tx_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💰 User Recv:  *${amount_usd:,.2f}*\n"
         f"🏦 User Addr:  `{user_address}`\n"
         f"🇮🇳 User Paid:  *₹{amount_inr:,.0f}*\n"
-        f"🔢 UTR:        `{tx_hash}`\n"
+        f"💳 Method:     *{method}*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"👤 User:       {username_str}\n"
         f"🪪 User ID:    `{user.id}`\n"
@@ -291,9 +335,10 @@ async def save_tx_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     proof_channel = await Database.get_setting("proof_channel_id", "")
     if proof_channel:
         try:
-            await context.bot.send_message(
+            await context.bot.send_photo(
                 chat_id=proof_channel,
-                text=proof_text,
+                photo=file_id,
+                caption=proof_text,
                 parse_mode="Markdown",
                 reply_markup=channel_order_keyboard(order_id),
             )
@@ -303,9 +348,10 @@ async def save_tx_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ── Notify individual admins (DM) ─────────────────────────────────────────
     for admin_id in ADMIN_IDS:
         try:
-            await context.bot.send_message(
+            await context.bot.send_photo(
                 chat_id=admin_id,
-                text=proof_text,
+                photo=file_id,
+                caption=proof_text,
                 parse_mode="Markdown",
                 reply_markup=channel_order_keyboard(order_id),
             )
@@ -359,9 +405,14 @@ def get_buy_conversation() -> ConversationHandler:
             ENTER_ADDRESS: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, enter_address),
             ],
-            AWAIT_TX_HASH: [
-                CallbackQueryHandler(prompt_tx_hash, pattern="^submit_utr$"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, save_tx_hash),
+            CHOOSE_PAYMENT_METHOD: [
+                CallbackQueryHandler(choose_payment_method, pattern="^pay_(upi|imps|cdm)$"),
+            ],
+            AWAIT_PAYMENT_PROOF: [
+                CallbackQueryHandler(prompt_payment_proof, pattern="^submit_proof$"),
+            ],
+            AWAIT_SCREENSHOT: [
+                MessageHandler(filters.PHOTO, save_screenshot),
             ],
         },
         fallbacks=[

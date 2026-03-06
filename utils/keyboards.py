@@ -34,9 +34,20 @@ def amount_entry_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
-def receipt_keyboard() -> InlineKeyboardMarkup:
+def payment_method_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ 𝗦𝗨𝗕𝗠𝗜𝗧 𝗨𝗧𝗥", callback_data="submit_utr")],
+        [
+            InlineKeyboardButton("🏛 𝗨𝗣𝗜", callback_data="pay_upi"),
+            InlineKeyboardButton("🏦 𝗜𝗠𝗣𝗦", callback_data="pay_imps"),
+            InlineKeyboardButton("🏧 𝗖𝗗𝗠", callback_data="pay_cdm"),
+        ],
+        [InlineKeyboardButton("🏠 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨", callback_data="main_menu")],
+    ])
+
+
+def payment_proof_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ 𝗜 𝗛𝗔𝗩𝗘 𝗣𝗔𝗜𝗗", callback_data="submit_proof")],
         [InlineKeyboardButton("🏠 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨", callback_data="main_menu")],
     ])
 
@@ -68,7 +79,10 @@ def admin_home_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("💬 Rates Message",    callback_data="adm_conv_msg"),
         ],
         [
-            InlineKeyboardButton("📷 QR Codes & Msgs",  callback_data="adm_qr"),
+            InlineKeyboardButton("🏦 UPI Info",  callback_data="adm_upi"),
+            InlineKeyboardButton("🏦 IMPS Info", callback_data="adm_imps"),
+        ],
+        [
             InlineKeyboardButton("📢 Proof Channel",    callback_data="adm_channel"),
         ],
         [
@@ -85,15 +99,11 @@ def admin_home_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
-def network_choice_keyboard(prefix: str) -> InlineKeyboardMarkup:
+def payment_info_action_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("BEP20", callback_data=f"{prefix}_bep20"),
-            InlineKeyboardButton("ERC20", callback_data=f"{prefix}_erc20"),
-        ],
-        [
-            InlineKeyboardButton("TON",   callback_data=f"{prefix}_ton"),
-            InlineKeyboardButton("TRC20", callback_data=f"{prefix}_trc20"),
+            InlineKeyboardButton("🖼 Set Photo", callback_data="setpay_photo"),
+            InlineKeyboardButton("📝 Set Text", callback_data="setpay_text"),
         ],
         [InlineKeyboardButton("↩️ Admin Menu", callback_data="adm_back")],
     ])

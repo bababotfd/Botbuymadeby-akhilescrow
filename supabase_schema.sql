@@ -25,8 +25,9 @@ CREATE TABLE IF NOT EXISTS orders (
     amount_usd      NUMERIC NOT NULL,
     amount_inr      NUMERIC NOT NULL,
     rate_used       NUMERIC NOT NULL,
-    utr             TEXT DEFAULT '',
-    status          TEXT DEFAULT 'awaiting_utr',
+    payment_method  TEXT DEFAULT '',
+    screenshot_id   TEXT DEFAULT '',
+    status          TEXT DEFAULT 'awaiting_payment',
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
@@ -51,13 +52,10 @@ INSERT INTO bot_settings (key, value) VALUES
 🔹 10 - 299$    ➜   💰 Rate: ₹98
 🔹 300 - 1350$  ➜   💵 Rate: ₹97
 🔹 1351$+       ➜   📈 Rate: ₹96'),
-    ('wallet_bep20',          'Not configured'),
-    ('wallet_erc20',          'Not configured'),
-    ('wallet_ton',            'Not configured'),
-    ('wallet_trc20',          'Not configured'),
-    ('qr_bep20',              ''),
-    ('qr_erc20',              ''),
-    ('qr_ton',                ''),
+    ('upi_photo',             ''),
+    ('upi_text',              'UPI Details:\nUPI ID: test@okicici'),
+    ('imps_photo',            ''),
+    ('imps_text',             'IMPS Details:\nA/C: 1234567890\nIFSC: ABCD0001234'),
     ('qr_trc20',              ''),
     ('qr_caption_bep20',      '🟡 Send BEP20 to the address below'),
     ('qr_caption_erc20',      '🔷 Send ERC20 to the address below'),
