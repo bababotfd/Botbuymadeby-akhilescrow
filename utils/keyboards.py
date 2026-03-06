@@ -95,6 +95,7 @@ def admin_home_keyboard() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton("✅ Approve Order", callback_data="adm_approve"),
             InlineKeyboardButton("❌ Reject Order",  callback_data="adm_reject"),
+        ],
         [
             InlineKeyboardButton("📊 User Stats",    callback_data="adm_user_stats"),
         ],
