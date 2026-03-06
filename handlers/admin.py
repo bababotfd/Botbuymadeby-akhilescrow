@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
     ADMIN_AWAIT_REJECT,
     ADMIN_AWAIT_RATES,
     ADMIN_VIEW_ORDERS,
-) = range(13)
+    ADMIN_AWAIT_CHANNEL,
+) = range(14)
 
 
 # ── Guard ──────────────────────────────────────────────────────────────────────
@@ -509,6 +510,40 @@ async def receive_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ADMIN_HOME
 
 
+# ── Proof channel ──────────────────────────────────────────────────
+async def prompt_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await _delete(query.message)
+    cur = await Database.get_setting("proof_channel_id", "Not set")
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=(
+            f"📢 *Proof Channel*\n\n"
+            f"Current: `{cur}`\n\n"
+            f"Send the channel ID where payment proofs will be posted.\n"
+            f"Format: `-1001234567890` (use a negative number for channels)\n\n"
+            f"⚠️ Make sure this bot is an *admin* in that channel before setting it."
+        ),
+        parse_mode="Markdown",
+        reply_markup=admin_cancel_keyboard(),
+    )
+    return ADMIN_AWAIT_CHANNEL
+
+
+async def receive_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    val = update.message.text.strip()
+    await Database.set_setting("proof_channel_id", val)
+    await _delete(update.message)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"✅ Proof channel set to `{val}`",
+        parse_mode="Markdown",
+        reply_markup=admin_home_keyboard(),
+    )
+    return ADMIN_HOME
+
+
 # ── ConversationHandler factory ───────────────────────────────────────────────
 def get_admin_conversation() -> ConversationHandler:
     back_btn = CallbackQueryHandler(admin_home, pattern="^adm_back$")
@@ -524,6 +559,7 @@ def get_admin_conversation() -> ConversationHandler:
                 CallbackQueryHandler(prompt_wallet_network,pattern="^adm_wallet$"),
                 CallbackQueryHandler(prompt_qr_network,    pattern="^adm_qr$"),
                 CallbackQueryHandler(prompt_rates,         pattern="^adm_rates$"),
+                CallbackQueryHandler(prompt_channel,       pattern="^adm_channel$"),
                 CallbackQueryHandler(view_all_orders,      pattern="^adm_orders$"),
                 CallbackQueryHandler(view_pending_orders,  pattern="^adm_pending$"),
                 CallbackQueryHandler(prompt_approve,       pattern="^adm_approve$"),
@@ -546,6 +582,7 @@ def get_admin_conversation() -> ConversationHandler:
             ADMIN_AWAIT_APPROVE:     [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_approve), back_btn],
             ADMIN_AWAIT_REJECT:      [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_reject), back_btn],
             ADMIN_AWAIT_RATES:       [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_rates), back_btn],
+            ADMIN_AWAIT_CHANNEL:     [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_channel), back_btn],
             ADMIN_VIEW_ORDERS:       [back_btn],
         },
         fallbacks=[CommandHandler("admin", admin_home)],

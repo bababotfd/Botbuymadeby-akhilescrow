@@ -62,7 +62,10 @@ def admin_home_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("💼 Wallet Addresses", callback_data="adm_wallet"),
             InlineKeyboardButton("📷 QR Codes",         callback_data="adm_qr"),
         ],
-        [InlineKeyboardButton("📈 Exchange Rate Tiers", callback_data="adm_rates")],
+        [
+            InlineKeyboardButton("📈 Exchange Rate Tiers", callback_data="adm_rates"),
+            InlineKeyboardButton("📢 Proof Channel",       callback_data="adm_channel"),
+        ],
         [
             InlineKeyboardButton("📦 All Orders",    callback_data="adm_orders"),
             InlineKeyboardButton("⏳ Pending Only",  callback_data="adm_pending"),
@@ -91,4 +94,14 @@ def network_choice_keyboard(prefix: str) -> InlineKeyboardMarkup:
 def admin_cancel_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("↩️ Cancel", callback_data="adm_back")],
+    ])
+
+
+def channel_order_keyboard(order_id: str) -> InlineKeyboardMarkup:
+    """Approve / Reject buttons posted to the proof channel."""
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✅ Approve", callback_data=f"ch_approve_{order_id}"),
+            InlineKeyboardButton("❌ Reject",  callback_data=f"ch_reject_{order_id}"),
+        ]
     ])

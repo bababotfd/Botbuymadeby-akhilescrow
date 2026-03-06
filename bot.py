@@ -8,6 +8,7 @@ from handlers.profile import get_handlers as profile_handlers
 from handlers.stats import get_handlers as stats_handlers
 from handlers.support import get_handlers as support_handlers
 from handlers.admin import get_admin_conversation
+from handlers.channel import get_handlers as channel_handlers
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)-8s | %(name)s — %(message)s",
@@ -19,9 +20,12 @@ logger = logging.getLogger(__name__)
 def build_app() -> Application:
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Admin conversation MUST be registered first so its /admin command
-    # is caught before the generic message handler.
+    # Admin conversation — first priority
     app.add_handler(get_admin_conversation())
+
+    # Channel approve/reject (works from channel AND DM buttons)
+    for handler in channel_handlers():
+        app.add_handler(handler)
 
     # Buy conversation
     app.add_handler(get_buy_conversation())

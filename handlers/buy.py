@@ -8,6 +8,7 @@ from telegram.ext import (
 from database import Database
 from utils.keyboards import (
     network_keyboard, amount_entry_keyboard, receipt_keyboard, back_to_main,
+    channel_order_keyboard,
 )
 from utils.order_id import generate_order_id
 from utils.exchange_rate import get_rate_for_amount
@@ -237,23 +238,48 @@ async def save_utr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _delete(update.message)
     await Database.update_order_utr(order_id, utr)
 
-    # Notify admin(s)
+    amount_usd = context.user_data.get("amount_usd", 0)
+    amount_inr = context.user_data.get("amount_inr", 0)
+    network    = context.user_data.get("network", "?").upper()
+    user       = update.effective_user
+    username_str = f"@{user.username}" if user.username else f"{user.full_name}"
+
+    proof_text = (
+        f"🔔 *New Payment Proof*\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🆔 Order ID:   `{order_id}`\n"
+        f"🔗 Network:    *{network}*\n"
+        f"💰 Amount:     *${amount_usd:,.2f}*\n"
+        f"🇮🇳 INR:        *₹{amount_inr:,.0f}*\n"
+        f"🔢 UTR:        `{utr}`\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"👤 User:       {username_str}\n"
+        f"🪪 User ID:    `{user.id}`\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"Use buttons below to approve or reject."
+    )
+
+    # ── Post to proof channel ──────────────────────────────────────────────────
+    proof_channel = await Database.get_setting("proof_channel_id", "")
+    if proof_channel:
+        try:
+            await context.bot.send_message(
+                chat_id=proof_channel,
+                text=proof_text,
+                parse_mode="Markdown",
+                reply_markup=channel_order_keyboard(order_id),
+            )
+        except Exception as e:
+            logger.error(f"Failed to post to proof channel: {e}")
+
+    # ── Notify individual admins (DM) ─────────────────────────────────────────
     for admin_id in ADMIN_IDS:
         try:
-            amount_usd = context.user_data.get("amount_usd", 0)
-            amount_inr = context.user_data.get("amount_inr", 0)
-            user = update.effective_user
             await context.bot.send_message(
                 chat_id=admin_id,
-                text=(
-                    f"🔔 *New Payment Pending!*\n\n"
-                    f"👤 User: @{user.username or user.full_name} (`{user.id}`)\n"
-                    f"🆔 Order ID: `{order_id}`\n"
-                    f"🔢 UTR: `{utr}`\n"
-                    f"💰 ${amount_usd:,.2f}  →  ₹{amount_inr:,.0f}\n\n"
-                    f"Use `/admin` to approve or reject."
-                ),
+                text=proof_text,
                 parse_mode="Markdown",
+                reply_markup=channel_order_keyboard(order_id),
             )
         except Exception:
             pass
