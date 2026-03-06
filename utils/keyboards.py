@@ -3,7 +3,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("💰 Buy Crypto", callback_data="buy")],
+        [InlineKeyboardButton("💰 Sell Crypto", callback_data="buy")],
         [
             InlineKeyboardButton("📊 Stats",   callback_data="stats"),
             InlineKeyboardButton("👤 Profile", callback_data="profile"),
@@ -28,7 +28,7 @@ def network_keyboard() -> InlineKeyboardMarkup:
 
 def amount_entry_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 View Conversion Rates", callback_data="view_rates")],
+        [InlineKeyboardButton("📊 View Exchange Rates", callback_data="view_rates")],
         [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
     ])
 
@@ -52,19 +52,22 @@ def admin_home_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("🖼 Main Menu Photo",  callback_data="adm_main_photo"),
-            InlineKeyboardButton("💳 Payment Photo",    callback_data="adm_pay_photo"),
+            InlineKeyboardButton("💳 Sell Photo",       callback_data="adm_pay_photo"),
+        ],
+        [
+            InlineKeyboardButton("📊 Stats Photo",      callback_data="adm_stats_photo"),
+            InlineKeyboardButton("👤 Profile Photo",    callback_data="adm_profile_photo"),
         ],
         [
             InlineKeyboardButton("📞 Support Username", callback_data="adm_support"),
             InlineKeyboardButton("💬 Rates Message",    callback_data="adm_conv_msg"),
         ],
         [
-            InlineKeyboardButton("💼 Wallet Addresses", callback_data="adm_wallet"),
-            InlineKeyboardButton("📷 QR Codes",         callback_data="adm_qr"),
+            InlineKeyboardButton("📷 QR Codes & Msgs",  callback_data="adm_qr"),
+            InlineKeyboardButton("📢 Proof Channel",    callback_data="adm_channel"),
         ],
         [
             InlineKeyboardButton("📈 Exchange Rate Tiers", callback_data="adm_rates"),
-            InlineKeyboardButton("📢 Proof Channel",       callback_data="adm_channel"),
         ],
         [
             InlineKeyboardButton("📦 All Orders",    callback_data="adm_orders"),

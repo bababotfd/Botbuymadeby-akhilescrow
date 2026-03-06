@@ -27,7 +27,8 @@ async def channel_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"🆔 Order ID:  `{order_id}`\n"
                 f"💰 Amount:   *${float(order['amount_usd']):,.2f}*\n"
-                f"🔢 UTR:       `{order.get('utr', '—')}`\n"
+                f"🏦 Details:  `{order.get('user_receiving_address', '—')}`\n"
+                f"🔢 Tx Hash:   `{order.get('tx_hash', '—')}`\n"
                 f"👤 User ID:  `{order['user_id']}`\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"✅ Approved and user notified."
@@ -45,7 +46,7 @@ async def channel_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"✅ *Payment Approved!*\n\n"
                 f"🆔 Order: `{order_id}`\n"
                 f"💰 ${float(order['amount_usd']):,.2f}\n\n"
-                f"Your crypto will be sent shortly. Thank you! 🙏"
+                f"Your INR will be sent to your given details shortly. Thank you! 🙏"
             ),
             parse_mode="Markdown",
         )
@@ -72,7 +73,8 @@ async def channel_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"🆔 Order ID:  `{order_id}`\n"
                 f"💰 Amount:   *${float(order['amount_usd']):,.2f}*\n"
-                f"🔢 UTR:       `{order.get('utr', '—')}`\n"
+                f"🏦 Details:  `{order.get('user_receiving_address', '—')}`\n"
+                f"🔢 Tx Hash:   `{order.get('tx_hash', '—')}`\n"
                 f"👤 User ID:  `{order['user_id']}`\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"❌ Rejected and user notified."

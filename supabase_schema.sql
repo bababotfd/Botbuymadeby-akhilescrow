@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     username    TEXT DEFAULT '',
     full_name   TEXT DEFAULT '',
     joined_at   TIMESTAMPTZ DEFAULT NOW(),
-    total_buys  NUMERIC DEFAULT 0,
+    total_sold  NUMERIC DEFAULT 0,
     successful_payments INTEGER DEFAULT 0,
     rejected_payments   INTEGER DEFAULT 0,
     total_orders        INTEGER DEFAULT 0
@@ -21,12 +21,12 @@ CREATE TABLE IF NOT EXISTS orders (
     order_id        TEXT UNIQUE NOT NULL,
     user_id         BIGINT REFERENCES users(user_id),
     network         TEXT NOT NULL,
-    wallet_address  TEXT NOT NULL,
+    user_receiving_address TEXT NOT NULL,
     amount_usd      NUMERIC NOT NULL,
     amount_inr      NUMERIC NOT NULL,
     rate_used       NUMERIC NOT NULL,
-    utr             TEXT DEFAULT '',
-    status          TEXT DEFAULT 'awaiting_utr',
+    tx_hash         TEXT DEFAULT '',
+    status          TEXT DEFAULT 'awaiting_hash',
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
@@ -41,7 +41,9 @@ CREATE TABLE IF NOT EXISTS bot_settings (
 -- Default settings
 INSERT INTO bot_settings (key, value) VALUES
     ('main_menu_photo',       ''),
-    ('payment_photo',         ''),
+    ('sell_photo',            ''),
+    ('stats_photo',           ''),
+    ('profile_photo',         ''),
     ('support_username',      '@support'),
     ('conversion_rate_message',
      '🔹 *Exchange Rates*
@@ -57,6 +59,10 @@ INSERT INTO bot_settings (key, value) VALUES
     ('qr_erc20',              ''),
     ('qr_ton',                ''),
     ('qr_trc20',              ''),
+    ('qr_caption_bep20',      '🟡 Send BEP20 to the address below'),
+    ('qr_caption_erc20',      '🔷 Send ERC20 to the address below'),
+    ('qr_caption_ton',        '💎 Send TON to the address below'),
+    ('qr_caption_trc20',      '🔴 Send TRC20 to the address below'),
     ('rate_tier_1_min',       '10'),
     ('rate_tier_1_max',       '299'),
     ('rate_tier_1_rate',      '98'),

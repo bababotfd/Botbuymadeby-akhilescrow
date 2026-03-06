@@ -68,15 +68,15 @@ class Database:
         return await _run(_query)
 
     @staticmethod
-    async def update_order_utr(order_id: str, utr: str) -> bool:
+    async def update_order_txhash(order_id: str, tx_hash: str) -> bool:
         def _query():
             try:
                 _client.table("orders").update(
-                    {"utr": utr, "status": "pending"}
+                    {"tx_hash": tx_hash, "status": "pending"}
                 ).eq("order_id", order_id).execute()
                 return True
             except Exception as e:
-                logger.error(f"update_order_utr error: {e}")
+                logger.error(f"update_order_txhash error: {e}")
                 return False
         return await _run(_query)
 
@@ -91,12 +91,12 @@ class Database:
                     return None
                 order = res.data[0]
                 u = _client.table("users").select(
-                    "successful_payments,total_buys"
+                    "successful_payments,total_sold"
                 ).eq("user_id", order["user_id"]).maybe_single().execute()
                 if u.data:
                     _client.table("users").update({
                         "successful_payments": (u.data.get("successful_payments") or 0) + 1,
-                        "total_buys": float(u.data.get("total_buys") or 0) + float(order["amount_usd"]),
+                        "total_sold": float(u.data.get("total_sold") or 0) + float(order["amount_usd"]),
                     }).eq("user_id", order["user_id"]).execute()
                 return order
             except Exception as e:

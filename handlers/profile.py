@@ -8,6 +8,12 @@ from utils.keyboards import back_to_main
 
 logger = logging.getLogger(__name__)
 
+async def _delete(msg):
+    try:
+        await msg.delete()
+    except Exception:
+        pass
+
 
 async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -34,7 +40,7 @@ async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         joined = "N/A"
 
     username = f"@{data.get('username')}" if data.get("username") else "—"
-    total_buys = float(data.get("total_buys") or 0)
+    total_sold = float(data.get("total_sold") or 0)
 
     text = (
         f"👤 *Your Profile*\n"
@@ -42,9 +48,9 @@ async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🆔 User ID:            `{data['user_id']}`\n"
         f"👤 Username:          {username}\n"
         f"📛 Name:               {data.get('full_name') or '—'}\n"
-        f"📅 Member Since:    {joined}\n"
+        f"📅 Member Since:    *{joined}*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"💰 Total Crypto Bought:  *${total_buys:,.2f}*\n"
+        f"💰 Total Crypto Sold:    *${total_sold:,.2f}*\n"
         f"📦 Total Orders:         *{data.get('total_orders') or 0}*\n"
         f"✅ Successful Payments:  *{data.get('successful_payments') or 0}*\n"
         f"❌ Rejected Payments:    *{data.get('rejected_payments') or 0}*\n"
@@ -52,16 +58,27 @@ async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     try:
-        await query.message.delete()
+        await _delete(query.message)
     except Exception:
         pass
 
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=back_to_main(),
-    )
+    profile_photo = await Database.get_setting("profile_photo", "")
+
+    if profile_photo:
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=profile_photo,
+            caption=text,
+            parse_mode="Markdown",
+            reply_markup=back_to_main(),
+        )
+    else:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=text,
+            parse_mode="Markdown",
+            reply_markup=back_to_main(),
+        )
 
 
 def get_handlers():

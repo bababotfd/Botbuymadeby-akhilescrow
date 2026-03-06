@@ -3,7 +3,7 @@ from telegram.ext import Application
 
 from config import BOT_TOKEN
 from handlers.start import get_handlers as start_handlers
-from handlers.buy import get_buy_conversation
+from handlers.sell import get_sell_conversation
 from handlers.profile import get_handlers as profile_handlers
 from handlers.stats import get_handlers as stats_handlers
 from handlers.support import get_handlers as support_handlers
@@ -27,8 +27,8 @@ def build_app() -> Application:
     for handler in channel_handlers():
         app.add_handler(handler)
 
-    # Buy conversation
-    app.add_handler(get_buy_conversation())
+    # Sell conversation
+    app.add_handler(get_sell_conversation())
 
     # Simple callback handlers
     for handler in start_handlers():

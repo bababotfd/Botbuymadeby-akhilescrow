@@ -16,18 +16,20 @@ logger = logging.getLogger(__name__)
     ADMIN_HOME,
     ADMIN_AWAIT_MAIN_PHOTO,
     ADMIN_AWAIT_PAY_PHOTO,
+    ADMIN_AWAIT_STATS_PHOTO,
+    ADMIN_AWAIT_PROFILE_PHOTO,
     ADMIN_AWAIT_SUPPORT,
     ADMIN_AWAIT_CONV_MSG,
-    ADMIN_CHOOSE_WALLET,
-    ADMIN_AWAIT_WALLET,
     ADMIN_CHOOSE_QR,
+    ADMIN_AWAIT_QR_ACTION,
     ADMIN_AWAIT_QR_PHOTO,
+    ADMIN_AWAIT_QR_CAPTION,
     ADMIN_AWAIT_APPROVE,
     ADMIN_AWAIT_REJECT,
     ADMIN_AWAIT_RATES,
     ADMIN_VIEW_ORDERS,
     ADMIN_AWAIT_CHANNEL,
-) = range(14)
+) = range(17)
 
 
 # ── Guard ──────────────────────────────────────────────────────────────────────
@@ -100,7 +102,7 @@ async def prompt_pay_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _delete(query.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="💳 *Send the new Payment photo:*",
+        text="💳 *Send the new Sell Amount photo:*",
         parse_mode="Markdown",
         reply_markup=admin_cancel_keyboard(),
     )
@@ -109,11 +111,61 @@ async def prompt_pay_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def receive_pay_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file_id = update.message.photo[-1].file_id
-    await Database.set_setting("payment_photo", file_id)
+    await Database.set_setting("sell_photo", file_id)
     await _delete(update.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="✅ Payment photo updated!",
+        text="✅ Sell photo updated!",
+        reply_markup=admin_home_keyboard(),
+    )
+    return ADMIN_HOME
+
+
+async def prompt_stats_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await _delete(query.message)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="📊 *Send the new Stats page photo:*",
+        parse_mode="Markdown",
+        reply_markup=admin_cancel_keyboard(),
+    )
+    return ADMIN_AWAIT_STATS_PHOTO
+
+
+async def receive_stats_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    file_id = update.message.photo[-1].file_id
+    await Database.set_setting("stats_photo", file_id)
+    await _delete(update.message)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="✅ Stats photo updated!",
+        reply_markup=admin_home_keyboard(),
+    )
+    return ADMIN_HOME
+
+
+async def prompt_profile_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await _delete(query.message)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="👤 *Send the new Profile page photo:*",
+        parse_mode="Markdown",
+        reply_markup=admin_cancel_keyboard(),
+    )
+    return ADMIN_AWAIT_PROFILE_PHOTO
+
+
+async def receive_profile_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    file_id = update.message.photo[-1].file_id
+    await Database.set_setting("profile_photo", file_id)
+    await _delete(update.message)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="✅ Profile photo updated!",
         reply_markup=admin_home_keyboard(),
     )
     return ADMIN_HOME
@@ -177,55 +229,7 @@ async def receive_conv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ADMIN_HOME
 
 
-# ── Wallet addresses ───────────────────────────────────────────────────────────
-async def prompt_wallet_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await _delete(query.message)
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="💼 *Select network to update wallet address:*",
-        parse_mode="Markdown",
-        reply_markup=network_choice_keyboard("wallet"),
-    )
-    return ADMIN_CHOOSE_WALLET
-
-
-async def choose_wallet_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    # callback_data = "wallet_bep20" etc.
-    network = query.data.split("_")[1]
-    context.user_data["editing_wallet_network"] = network
-    cur = await Database.get_setting(f"wallet_{network}", "Not set")
-    await _delete(query.message)
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=(
-            f"💼 *{network.upper()} Wallet*\n\n"
-            f"Current: `{cur}`\n\n"
-            f"Send the new wallet address:"
-        ),
-        parse_mode="Markdown",
-        reply_markup=admin_cancel_keyboard(),
-    )
-    return ADMIN_AWAIT_WALLET
-
-
-async def receive_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    network = context.user_data.pop("editing_wallet_network", None)
-    if not network:
-        await update.message.reply_text("❌ Session error. Try again.", reply_markup=admin_home_keyboard())
-        return ADMIN_HOME
-    val = update.message.text.strip()
-    await Database.set_setting(f"wallet_{network}", val)
-    await _delete(update.message)
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=f"✅ {network.upper()} wallet updated!",
-        reply_markup=admin_home_keyboard(),
-    )
-    return ADMIN_HOME
+# Removed Wallet logic separately since selling bot gives user *their* crypto wallet within the QR logic.
 
 
 # ── QR codes ───────────────────────────────────────────────────────────────────
@@ -235,7 +239,7 @@ async def prompt_qr_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _delete(query.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="📷 *Select network to update QR code:*",
+        text="📷 *Select network to update QR & Caption:*",
         parse_mode="Markdown",
         reply_markup=network_choice_keyboard("qr"),
     )
@@ -248,6 +252,28 @@ async def choose_qr_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
     network = query.data.split("_")[1]
     context.user_data["editing_qr_network"] = network
     await _delete(query.message)
+    
+    markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📷 Set QR Photo", callback_data="setqr_photo")],
+        [InlineKeyboardButton("💬 Set Caption Text", callback_data="setqr_caption")],
+        [InlineKeyboardButton("↩️ Admin Menu", callback_data="adm_back")],
+    ])
+    
+    caption = await Database.get_setting(f"qr_caption_{network}", "Not set")
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"📷 *{network.upper()} Settings*\n\nCurrent Caption:\n`{caption}`\n\nWhat would you like to update?",
+        parse_mode="Markdown",
+        reply_markup=markup,
+    )
+    return ADMIN_AWAIT_QR_ACTION
+
+
+async def prompt_qr_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    network = context.user_data.get("editing_qr_network", "")
+    await _delete(query.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=f"📷 *Send the QR code photo for {network.upper()}:*",
@@ -255,6 +281,20 @@ async def choose_qr_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=admin_cancel_keyboard(),
     )
     return ADMIN_AWAIT_QR_PHOTO
+
+
+async def prompt_qr_caption(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    network = context.user_data.get("editing_qr_network", "")
+    await _delete(query.message)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"💬 *Send the new text caption for {network.upper()}:*\n_(This text will appear below the QR code, usually where you type the wallet address)_",
+        parse_mode="Markdown",
+        reply_markup=admin_cancel_keyboard(),
+    )
+    return ADMIN_AWAIT_QR_CAPTION
 
 
 async def receive_qr_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -267,7 +307,23 @@ async def receive_qr_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _delete(update.message)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"✅ QR code for {network.upper()} updated!",
+        text=f"✅ QR code photo for {network.upper()} updated!",
+        reply_markup=admin_home_keyboard(),
+    )
+    return ADMIN_HOME
+
+
+async def receive_qr_caption(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    network = context.user_data.pop("editing_qr_network", None)
+    if not network:
+        await update.message.reply_text("❌ Session error.", reply_markup=admin_home_keyboard())
+        return ADMIN_HOME
+    text = update.message.text.strip()
+    await Database.set_setting(f"qr_caption_{network}", text)
+    await _delete(update.message)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"✅ QR caption for {network.upper()} updated!",
         reply_markup=admin_home_keyboard(),
     )
     return ADMIN_HOME
@@ -361,11 +417,11 @@ def _format_orders(orders: list, title: str) -> str:
         return f"{title}\n\n_No orders found._"
     lines = [title, ""]
     for o in orders:
-        status_emoji = {"approved": "✅", "pending": "⏳", "rejected": "❌", "awaiting_utr": "🔘"}.get(o["status"], "❓")
+        status_emoji = {"approved": "✅", "pending": "⏳", "rejected": "❌", "awaiting_hash": "🔘"}.get(o["status"], "❓")
         lines.append(
             f"{status_emoji} `{o['order_id']}`\n"
             f"   💰 ${float(o['amount_usd']):,.2f}  |  {o['network']}\n"
-            f"   🔢 UTR: `{o.get('utr') or '—'}`\n"
+            f"   🔢 TxHash: `{o.get('tx_hash') or '—'}`\n"
         )
     return "\n".join(lines)
 
@@ -554,9 +610,10 @@ def get_admin_conversation() -> ConversationHandler:
             ADMIN_HOME: [
                 CallbackQueryHandler(prompt_main_photo,    pattern="^adm_main_photo$"),
                 CallbackQueryHandler(prompt_pay_photo,     pattern="^adm_pay_photo$"),
+                CallbackQueryHandler(prompt_stats_photo,   pattern="^adm_stats_photo$"),
+                CallbackQueryHandler(prompt_profile_photo, pattern="^adm_profile_photo$"),
                 CallbackQueryHandler(prompt_support,       pattern="^adm_support$"),
                 CallbackQueryHandler(prompt_conv_msg,      pattern="^adm_conv_msg$"),
-                CallbackQueryHandler(prompt_wallet_network,pattern="^adm_wallet$"),
                 CallbackQueryHandler(prompt_qr_network,    pattern="^adm_qr$"),
                 CallbackQueryHandler(prompt_rates,         pattern="^adm_rates$"),
                 CallbackQueryHandler(prompt_channel,       pattern="^adm_channel$"),
@@ -567,18 +624,21 @@ def get_admin_conversation() -> ConversationHandler:
             ],
             ADMIN_AWAIT_MAIN_PHOTO:  [MessageHandler(filters.PHOTO, receive_main_photo), back_btn],
             ADMIN_AWAIT_PAY_PHOTO:   [MessageHandler(filters.PHOTO, receive_pay_photo),  back_btn],
+            ADMIN_AWAIT_STATS_PHOTO: [MessageHandler(filters.PHOTO, receive_stats_photo),back_btn],
+            ADMIN_AWAIT_PROFILE_PHOTO:[MessageHandler(filters.PHOTO, receive_profile_photo),back_btn],
             ADMIN_AWAIT_SUPPORT:     [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_support), back_btn],
             ADMIN_AWAIT_CONV_MSG:    [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_conv_msg), back_btn],
-            ADMIN_CHOOSE_WALLET: [
-                CallbackQueryHandler(choose_wallet_network, pattern="^wallet_(bep20|erc20|ton|trc20)$"),
-                back_btn,
-            ],
-            ADMIN_AWAIT_WALLET:      [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_wallet), back_btn],
             ADMIN_CHOOSE_QR: [
                 CallbackQueryHandler(choose_qr_network, pattern="^qr_(bep20|erc20|ton|trc20)$"),
                 back_btn,
             ],
+            ADMIN_AWAIT_QR_ACTION: [
+                CallbackQueryHandler(prompt_qr_photo, pattern="^setqr_photo$"),
+                CallbackQueryHandler(prompt_qr_caption, pattern="^setqr_caption$"),
+                back_btn,
+            ],
             ADMIN_AWAIT_QR_PHOTO:    [MessageHandler(filters.PHOTO, receive_qr_photo), back_btn],
+            ADMIN_AWAIT_QR_CAPTION:  [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_qr_caption), back_btn],
             ADMIN_AWAIT_APPROVE:     [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_approve), back_btn],
             ADMIN_AWAIT_REJECT:      [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_reject), back_btn],
             ADMIN_AWAIT_RATES:       [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_rates), back_btn],

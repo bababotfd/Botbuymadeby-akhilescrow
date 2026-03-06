@@ -7,6 +7,12 @@ from utils.keyboards import back_to_main
 
 logger = logging.getLogger(__name__)
 
+async def _delete(msg):
+    try:
+        await msg.delete()
+    except Exception:
+        pass
+
 
 async def stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -32,20 +38,31 @@ async def stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⏳ Pending Payments:     *{pending:,}*\n"
         f"❌ Rejected Payments:    *{rejected:,}*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"💎 Powered by Crypto Buy Bot"
+        f"💎 Powered by *Crypto Sell Bot*"
     )
 
     try:
-        await query.message.delete()
+        await _delete(query.message)
     except Exception:
         pass
 
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=back_to_main(),
-    )
+    stats_photo = await Database.get_setting("stats_photo", "")
+
+    if stats_photo:
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=stats_photo,
+            caption=text,
+            parse_mode="Markdown",
+            reply_markup=back_to_main(),
+        )
+    else:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=text,
+            parse_mode="Markdown",
+            reply_markup=back_to_main(),
+        )
 
 
 def get_handlers():
