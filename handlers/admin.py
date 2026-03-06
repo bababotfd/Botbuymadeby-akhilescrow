@@ -644,13 +644,18 @@ async def receive_user_stats(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     orders = await Database.get_user_orders(user_id)
 
-    username_str = f"@{user['username']}" if user.get("username") else "—"
+    username_raw = user.get("username")
+    username_str = f"@{username_raw}".replace("_", "\\_") if username_raw else "—"
+    
+    full_name_raw = str(user.get("full_name") or "—")
+    full_name_str = full_name_raw.replace("_", "\\_").replace("*", "\\*").replace("`", "\\`")
+
     text = (
         f"📊 *User Statistics*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🆔 User ID: `{user['user_id']}`\n"
+        f"🆔 User ID: `{user.get('user_id', user_id)}`\n"
         f"👤 Username: {username_str}\n"
-        f"📛 Name: {user.get('full_name') or '—'}\n"
+        f"📛 Name: {full_name_str}\n"
         f"💰 Total Bought: *${float(user.get('total_buys') or 0):,.2f}*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"📦 *Transaction History:*\n\n"

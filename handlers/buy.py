@@ -375,7 +375,11 @@ async def save_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     network      = context.user_data.get("network", "?").upper()
     user_address = context.user_data.get("user_address", "Unknown")
     user         = update.effective_user
-    username_str = f"@{user.username}" if user.username else f"{user.full_name}"
+    
+    # Escape markdown characters to prevent parsing errors
+    _raw_name = user.username if user.username else user.full_name
+    _clean_name = str(_raw_name).replace("_", "\\_").replace("*", "\\*").replace("`", "\\`")
+    username_str = f"@{_clean_name}" if user.username else _clean_name
 
     proof_text = (
         f"🔔 *New Buy Order Proof*\n"

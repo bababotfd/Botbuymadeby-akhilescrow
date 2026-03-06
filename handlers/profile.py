@@ -34,15 +34,20 @@ async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         joined = "N/A"
 
-    username = f"@{data.get('username')}" if data.get("username") else "—"
+    username_raw = data.get("username")
+    username = f"@{username_raw}".replace("_", "\\_") if username_raw else "—"
+    
+    full_name_raw = str(data.get("full_name") or "—")
+    full_name = full_name_raw.replace("_", "\\_").replace("*", "\\*").replace("`", "\\`")
+    
     total_buys = float(data.get("total_buys") or 0)
 
     text = (
         f"👤 *Your Profile*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🆔 User ID:            `{data['user_id']}`\n"
+        f"🆔 User ID:            `{data.get('user_id', user.id)}`\n"
         f"👤 Username:          {username}\n"
-        f"📛 Name:               {data.get('full_name') or '—'}\n"
+        f"📛 Name:               {full_name}\n"
         f"📅 Member Since:    *{joined}*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"💰 Total Crypto Bought:  *${total_buys:,.2f}*\n"
